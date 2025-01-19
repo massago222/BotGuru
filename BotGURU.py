@@ -3,7 +3,6 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackContext, CallbackQueryHandler, filters
 from apscheduler.schedulers.background import BackgroundScheduler
 import requests
-from binance.client import Client  # Importando a biblioteca da Binance
 
 # Lista de feeds RSS que o bot irá monitorar
 RSS_FEEDS = [
@@ -12,21 +11,11 @@ RSS_FEEDS = [
     'https://bitcoinmagazine.com/feed',  # Exemplo: Bitcoin Magazine
 ]
 
-# Binance API (criar uma conta na Binance e gerar as chaves de API)
-BINANCE_API_KEY = 'SUA_API_KEY_AQUI'
-BINANCE_API_SECRET = 'SUA_API_SECRET_AQUI'
-binance_client = Client(BINANCE_API_KEY, BINANCE_API_SECRET)  # Inicializando o cliente da Binance
-
 # Função para ler o feed RSS
 def get_rss_feed(url):
     feed = feedparser.parse(url)
     entries = feed.entries[:5]  # Vamos pegar os 5 primeiros itens do feed
     return entries
-
-# Função para obter o valor atual do Bitcoin na Binance
-def get_bitcoin_price_binance():
-    ticker = binance_client.get_symbol_ticker(symbol="BTCUSDT")  # Obtendo o preço de BTC/USDT
-    return ticker['price']  # Retorna o preço de Bitcoin em USD
 
 # Função para obter o valor atual do Bitcoin (alternativo - usando Coingecko)
 def get_bitcoin_price():
@@ -48,7 +37,7 @@ async def send_rss_updates(update: Update, context: CallbackContext):
                 message += f"• {entry.title}\n{entry.link}\n\n"
     
     # Enviar a mensagem com as últimas notícias
-    await update.callback_query.message.edit_text(message)
+    await update.message.reply_text(message)  # Usar reply_text em vez de edit_text
 
 # Função do comando /start
 async def start(update: Update, context: CallbackContext):
@@ -56,8 +45,8 @@ async def start(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     context.chat_data.setdefault("user_ids", set()).add(user_id)
     
-    # Obter o valor atual do Bitcoin na Binance
-    bitcoin_price_binance = get_bitcoin_price_binance()
+    # Obter o valor atual do Bitcoin usando a API Coingecko
+    bitcoin_price = get_bitcoin_price()
     
     # Criar os botões com os links
     youtube_button = InlineKeyboardButton(text="Visite nosso Canal no YouTube", url="https://www.youtube.com/@OGrandeGuru")
@@ -67,7 +56,7 @@ async def start(update: Update, context: CallbackContext):
     whatsapp_button = InlineKeyboardButton(text="Fale com o Grande Guru", url="https://wa.me/351927581400")  # Adicionando botão para o WhatsApp
 
     # Agrupando os botões em uma linha ou em múltiplas linhas
-    keyboard = InlineKeyboardMarkup([
+    keyboard = InlineKeyboardMarkup([ 
         [youtube_button],
         [tiktok_button],
         [website_button],
@@ -78,7 +67,7 @@ async def start(update: Update, context: CallbackContext):
     # Enviar a mensagem com o valor do Bitcoin e os botões
     await update.message.reply_text(
         f'Olá! Fique por dentro das principais notícias do mundo da Criptomoeda.\n\n'
-        f'O valor atual do Bitcoin na Binance é: ${bitcoin_price_binance}\n\n'
+        f'O valor atual do Bitcoin é: ${bitcoin_price}\n\n'
         'Clique nos botões abaixo para nos seguir e ficar conectado!',
         reply_markup=keyboard
     )
